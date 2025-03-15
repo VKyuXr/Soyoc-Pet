@@ -1,0 +1,7 @@
+PySide6
+pyaudio
+librosa
+numpy
+live2d-py
+PyOpenGL
+toml

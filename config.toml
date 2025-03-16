@@ -3,14 +3,14 @@ beats_enable = false
 
 [general]
 refresh_rate = 120
-l2d_size = [ 200, 600,]
+l2d_size = [ 200.0, 600.0,]
 
 [l2d]
 l2d_model = "./model/hiyori_free_t08"
 auto_breath = "True"
 auto_blink = "True"
 tracking_sensitivity = 2
-standby_active_rate = 1
+standby_active_rate = 0.5
 [[l2d.click_action]]
 name = "hiyori_m05"
 group = "Idle"

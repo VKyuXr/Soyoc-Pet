@@ -1,6 +1,7 @@
 import live2d.v3 as live2d
 import os, json, logging
 import Soyoc_core.physics as Soyoc_physics
+import Soyoc_core.motion_manager as Soyoc_motion_manager
 
 class Live2DPhysics:
     def __init__(self, model: live2d.LAppModel, model_params: dict, model_params_range: dict, physics_setting_count: int, physics_dictionary: list[dict]):
@@ -51,9 +52,9 @@ class Live2DPhysics:
         return self.model_params
 
 class Live2DManager:
-    def __init__(self, config_editer):
-        self.config_editer = config_editer
-        self.l2d_folder_name = self.config_editer.l2d_model
+    def __init__(self, config_editor):
+        self.config_editor = config_editor
+        self.l2d_folder_name = self.config_editor.l2d_model
         self.model: live2d.LAppModel
         self.model_params: dict = {}
         self.model_params_range: dict = {}
@@ -64,6 +65,8 @@ class Live2DManager:
             "music": False,
             "motion": False,
         }
+        self.motion_now: str
+        self.motion_manager = Soyoc_motion_manager.MotionManager(self.config_editor)
     
     def is_track(self):
         return self.state["track"]
@@ -80,6 +83,9 @@ class Live2DManager:
                 self.state[key] = True
             else:
                 self.state[key] = False
+
+    def set_motion(self, motion_name: str):
+        self.motion_now = motion_name
 
     def _load_model_parameters(self, model: live2d.LAppModel):
         for i in range(model.GetParameterCount()):
@@ -120,8 +126,8 @@ class Live2DManager:
         self.model = live2d.LAppModel()
         self.model.LoadModelJson(model_json_path)
 
-        self.model.SetAutoBreathEnable(self.config_editer.auto_breath)
-        self.model.SetAutoBlinkEnable(self.config_editer.auto_blink)
+        self.model.SetAutoBreathEnable(self.config_editor.auto_breath)
+        self.model.SetAutoBlinkEnable(self.config_editor.auto_blink)
 
         self._load_model_parameters(self.model)
         self._load_physics()
@@ -135,13 +141,20 @@ class Live2DManager:
         if not self.model:
             return
         
-        self.model_params.update(self.l2d_physics.update_model_params(self.model_params, 1 / self.config_editer.refresh_rate, self.velocity))
+        if self.is_motion():
+            posture, end = self.motion_manager.get_motion_posture(self.motion_now)
+            self.model_params.update(posture)
+            if end:
+                self.set_state_true("track")
+
+        else:
+            self.model_params.update(self.l2d_physics.update_model_params(self.model_params, 1 / self.config_editor.refresh_rate, self.velocity))
 
         for param_name, param_value in self.model_params.items():
-            if self.config_editer.auto_breath and param_name == "ParamBreath":
+            if self.config_editor.auto_breath and param_name == "ParamBreath":
                 continue
 
-            if self.config_editer.auto_blink and param_name in ["ParamEyeLOpen", "ParamEyeROpen"]:
+            if self.config_editor.auto_blink and param_name in ["ParamEyeLOpen", "ParamEyeROpen"]:
                 continue
 
-            self.model.SetParameterValue(param_name, param_value)
+            self.model.SetParameterValue(param_name, param_value, 1 / self.config_editor.refresh_rate * 20)

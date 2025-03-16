@@ -12,7 +12,7 @@ if (-not (Get-Command pip -ErrorAction SilentlyContinue)) {
 
 # 安装依赖
 try {
-    pip install -r requirements.txt
+    pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
     if ($LASTEXITCODE -eq 0) {
         Write-Host "依赖安装成功！" -ForegroundColor Green
     } else {

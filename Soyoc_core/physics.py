@@ -1,11 +1,5 @@
 import numpy as np
 
-REFRESH_RATE = 120
-L2D_SIZE = (300, 600)
-AUTO_BREATH = True
-AUTO_BLINK = True
-GAIN_track = 2
-
 class PhysicsSimulator:
     def __init__(self, 
                  strand_count: int,
@@ -154,7 +148,6 @@ class PhysicsSimulator:
         
         self.gravity = [0, -1] + np.array(inertial_force, dtype=np.float32) * 0.9
         self.gravity = self.gravity / np.linalg.norm(self.gravity)
-
 
 class PhysicsSetting:
     def __init__(self, id: str, name: str):

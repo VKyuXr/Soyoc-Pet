@@ -2,7 +2,7 @@ import logging
 import sys, logging, os
 import PySide6.QtWidgets as QtWidgets
 import datetime
-import Soyoc_core.config_editer as Soyoc_config
+import Soyoc_core.config_editor as Soyoc_config
 import Soyoc_core.main_window as Soyoc_window
 
 class LoggerManager:
@@ -76,12 +76,12 @@ if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
 
     # 获取当前脚本的绝对路径
-    current_dir = os.path.dirname(os.path.abspath(__file__))  # 当前脚本所在目录构建配置文件的绝对路径
-    config_file_path = os.path.join(current_dir, "config.toml")  # 使用绝对路径读取配置文件
-    config_editer = Soyoc_config.ConfigEditor(config_file_path)
+    main_dir = os.path.dirname(os.path.abspath(__file__))  # 当前脚本所在目录构建配置文件的绝对路径
+    config_file_path = os.path.join(main_dir, "config.toml")  # 使用绝对路径读取配置文件
+    config_editor = Soyoc_config.ConfigEditor(main_dir)
 
     # 实例化主窗口
-    main_window = Soyoc_window.MainWindow(config_editer)
+    main_window = Soyoc_window.MainWindow(config_editor)
     main_window.show()
 
     sys.exit(app.exec())

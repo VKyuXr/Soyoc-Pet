@@ -7,23 +7,23 @@ import OpenGL.GL as GL
 import Soyoc_core.live2d_manager as Soyoc_l2d_manager
 import Soyoc_core.Soyoc_utils.audio_analyzer as Soyoc_audio
 import math, random
-import Soyoc_core.config_editer as Soyoc_config
+import Soyoc_core.config_editor as Soyoc_config
 
 class Live2DWidget(QtOpenGLWidgets.QOpenGLWidget):
-    def __init__(self, l2d_manager: Soyoc_l2d_manager.Live2DManager, config_editer: Soyoc_config.ConfigEditor) -> None:
+    def __init__(self, l2d_manager: Soyoc_l2d_manager.Live2DManager, config_editor: Soyoc_config.ConfigEditor) -> None:
         super().__init__()
         self.l2d_manager = l2d_manager
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.setMouseTracking(True)
-        self.config_editer = config_editer
-        self.config_editer.set_l2d_model_manager(self.l2d_manager)
+        self.config_editor = config_editor
+        self.config_editor.set_l2d_model_manager(self.l2d_manager)
 
         # 监听配置更新信号
-        self.config_editer.config_updated.connect(self.on_config_updated)   # 连接信号 [[9]]
+        self.config_editor.config_updated.connect(self.on_config_updated)   # 连接信号 [[9]]
 
     def on_config_updated(self):
         """处理配置更新事件"""
-        width, height = self.config_editer.l2d_size.width(), self.config_editer.l2d_size.height()
+        width, height = self.config_editor.l2d_size.width(), self.config_editor.l2d_size.height()
         self.resize(width, height)  # 调整窗口大小
         self.resizeGL(width, height)  # 手动调用 resizeGL 触发重绘
 
@@ -37,7 +37,7 @@ class Live2DWidget(QtOpenGLWidgets.QOpenGLWidget):
         GL.glEnable(GL.GL_DEPTH_TEST)
         GL.glClearDepth(1.0)
 
-        self.startTimer(int(1000 / self.config_editer.refresh_rate))
+        self.startTimer(int(1000 / self.config_editor.refresh_rate))
 
     def resizeGL(self, width: int, height: int):
         self.l2d_manager.model.Resize(width, height)
@@ -45,8 +45,7 @@ class Live2DWidget(QtOpenGLWidgets.QOpenGLWidget):
     def paintGL(self) -> None:
         live2d.clearBuffer()
         self.l2d_manager.model.Update()
-        if not self.l2d_manager.is_motion():
-            self.l2d_manager.params_update()
+        self.l2d_manager.params_update()
         self.l2d_manager.model.Draw()
 
     def timerEvent(self, event: QtCore.QTimerEvent):
@@ -63,9 +62,9 @@ class Live2DWidget(QtOpenGLWidgets.QOpenGLWidget):
         super().mouseMoveEvent(event)
 
 class MainWindow(QtWidgets.QMainWindow):
-    def __init__(self, config_editer: Soyoc_config.ConfigEditor):
+    def __init__(self, config_editor: Soyoc_config.ConfigEditor):
         super().__init__()
-        self.config_editor: Soyoc_config.ConfigEditor = config_editer
+        self.config_editor: Soyoc_config.ConfigEditor = config_editor
         self.l2d_manager = Soyoc_l2d_manager.Live2DManager(self.config_editor)
         self.l2d_widget = Live2DWidget(self.l2d_manager, self.config_editor)
         self.n_beats_per_cycle = 4
@@ -213,7 +212,7 @@ class MainWindow(QtWidgets.QMainWindow):
             # 如果点击发生在 Live2DWidget 上，允许拖拽
             self.drag_start_pos = event.globalPosition().toPoint()
             self.drag_window_pos = self.pos()
-            self.press_timer.start(500)  # 启动长按计时器
+            self.press_timer.start(100)  # 启动长按计时器
             event.accept()
         else:
             super().mousePressEvent(event)
@@ -258,50 +257,21 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def play_click_motion(self):
         """播放随机点击动作"""
-        # 动作开始播放前调用该函数
-        def onStartCallback(group: str, no: int):
-            self.l2d_manager.set_state_true("motion")
-
-        # 动作播放结束后会调用该函数
-        def onFinishCallback():
-            self.l2d_manager.set_state_true("track")
-
-        if self.l2d_manager.is_motion():
+        if not len(self.config_editor.click_action):
             return
-        
-        motion = random.choice(self.config_editor.click_action)
-        self.config_editor.l2d_manager.model.StartMotion(
-            motion["group"],
-            motion["index"],
-            1,
-            onStartCallback,
-            onFinishCallback
-        )
+        motion_name = random.choice(self.config_editor.click_action)["name"]
+        self.l2d_manager.set_motion(motion_name)
+        self.l2d_manager.set_state_true("motion")
 
     def play_standby_motion(self):
         """播放随机点击动作"""
-        # 动作开始播放前调用该函数
-        def onStartCallback(group: str, no: int):
-            self.l2d_manager.set_state_true("motion")
-
-        # 动作播放结束后会调用该函数
-        def onFinishCallback():
-            self.l2d_manager.set_state_true("track")
-
-        if not self.l2d_manager.is_track():
-            return
-        
         if random.random() < (1 - self.config_editor.standby_active_rate):
             return
-
-        motion = random.choice(self.config_editor.standby_action)
-        self.config_editor.l2d_manager.model.StartMotion(
-            motion["group"],
-            motion["index"],
-            1,
-            onStartCallback,
-            onFinishCallback
-        )
+        if not len(self.config_editor.standby_action):
+            return
+        motion_name = random.choice(self.config_editor.standby_action)["name"]
+        self.l2d_manager.set_motion(motion_name)
+        self.l2d_manager.set_state_true("motion")
     
     def check_audio_conditions(self):
         """检查音频条件并控制动画状态"""

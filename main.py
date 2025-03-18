@@ -24,7 +24,7 @@ class LoggerManager:
         self.cleanup_old_logs()
 
         # 配置日志文件路径
-        log_file = f"{self.log_dir}/log_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
+        log_file = os.path.join(self.log_dir, f"log_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log")
 
         # 配置日志记录器
         logging.basicConfig(

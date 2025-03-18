@@ -89,6 +89,7 @@ class TitleBar(QtWidgets.QWidget):
         super().__init__(parent)
         self.parent_window: ConfigEditor = parent
         bar_layout = QtWidgets.QHBoxLayout()
+        bar_layout.setContentsMargins(0, 5, 0, 5)
         self.setLayout(bar_layout)
 
         self.is_dragging = False  # 标记是否正在拖动
@@ -103,6 +104,7 @@ class TitleBar(QtWidgets.QWidget):
     
         # 关闭按钮
         close_button = QtWidgets.QPushButton("关闭")
+        close_button.setFont(QtGui.QFont("Microsoft YaHei", 12))
         close_button.setFixedSize(60, 30)
         close_button.clicked.connect(self.parent_window.close)
         bar_layout.addWidget(close_button)
@@ -136,8 +138,19 @@ class GeneralPage(QtWidgets.QWidget):
 
     def init_ui(self):
         """初始化通用设置"""
-        layout = QtWidgets.QFormLayout()
+        layout = QtWidgets.QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(layout)
+
+        scroll_area = QtWidgets.QScrollArea()
+        scroll_area.setWidgetResizable(True)  # 允许内容自适应大小
+        layout.addWidget(scroll_area)
+
+        content_widget = QtWidgets.QWidget()
+        scroll_area.setWidget(content_widget)
+
+        form_layout = QtWidgets.QFormLayout()
+        content_widget.setLayout(form_layout)
 
         # 刷新率滑条
         refresh_rate_slider_layout = QtWidgets.QHBoxLayout()
@@ -154,7 +167,7 @@ class GeneralPage(QtWidgets.QWidget):
         self.refresh_rate_label.setFixedWidth(50)
         refresh_rate_slider_layout.addWidget(self.refresh_rate_label)
 
-        layout.addRow("动画刷新率", refresh_rate_slider_layout)
+        form_layout.addRow("动画刷新率", refresh_rate_slider_layout)
 
         # Live2D 尺寸滑条
         model_size_slider_layout = QtWidgets.QHBoxLayout()
@@ -172,7 +185,24 @@ class GeneralPage(QtWidgets.QWidget):
         self.model_size_label.setFixedWidth(50)
         model_size_slider_layout.addWidget(self.model_size_label)
 
-        layout.addRow("模型尺寸", model_size_slider_layout)
+        form_layout.addRow("模型尺寸", model_size_slider_layout)
+
+        # 信息字体尺寸滑条
+        message_size_slider_layout = QtWidgets.QHBoxLayout()
+
+        self.message_size_slider = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal)
+        self.message_size_slider.setFixedHeight(30)
+        self.message_size_slider.setRange(10, 50)
+        self.message_size_slider.setValue(self.config_editor.message_size)
+        self.message_size_slider.valueChanged.connect(self.update_message_size)
+        message_size_slider_layout.addWidget(self.message_size_slider)
+
+        self.message_size_label = QtWidgets.QLabel(str(self.message_size_slider.value()))
+        self.message_size_label.setFixedHeight(30)
+        self.message_size_label.setFixedWidth(50)
+        message_size_slider_layout.addWidget(self.message_size_label)
+
+        form_layout.addRow("弹出字体尺寸", message_size_slider_layout)
 
     def update_refresh_rate(self):
         """更新刷新率配置"""
@@ -188,6 +218,11 @@ class GeneralPage(QtWidgets.QWidget):
         self.model_size_label.setText(str(value))
         self.config_editor.config["general"]["l2d_size"] = [value * base_size[0], value * base_size[1]]
 
+    def update_message_size(self):
+        self.config_editor.message_size = self.message_size_slider.value()
+        self.message_size_label.setText(str(self.config_editor.message_size))
+        self.config_editor.config["general"]["message"] = self.config_editor.message_size
+
 class Live2DPage(QtWidgets.QWidget):
     def __init__(self, config_editor):
         super().__init__()
@@ -197,6 +232,7 @@ class Live2DPage(QtWidgets.QWidget):
     def init_ui(self):
         """初始化 Live2D 设置"""
         layout = QtWidgets.QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(layout)
 
         scroll_area = QtWidgets.QScrollArea()
@@ -375,28 +411,6 @@ class Live2DPage(QtWidgets.QWidget):
         return container
 
     def play_motion(self, motion_name, button):
-        # """播放指定的动作"""
-        # # 动作开始播放前调用该函数
-        # def onStartCallback(group: str, no: int):
-        #     self.config_editor.l2d_manager.set_state_true("motion")
-
-        # # 动作播放结束后会调用该函数
-        # def onFinishCallback():
-        #     self.config_editor.l2d_manager.set_state_true("track")
-        #     button.setChecked(False)
-
-        # if self.config_editor.l2d_manager.is_motion():
-        #     button.setChecked(False)
-            
-        # motion_group = self.config_editor.motions[motion_name]["group"]
-        # motion_index = self.config_editor.motions[motion_name]["index"]
-        # self.config_editor.l2d_manager.model.StartMotion(
-        #     motion_group,
-        #     motion_index,
-        #     1,
-        #     onStartCallback,
-        #     onFinishCallback
-        # )
         self.config_editor.l2d_manager.set_motion(motion_name)
         self.config_editor.l2d_manager.set_state_true("motion")
         button.setChecked(False)
@@ -450,6 +464,136 @@ class Live2DPage(QtWidgets.QWidget):
         self.auto_blink_button.setChecked(self.config_editor.auto_blink)
         self.config_editor.config["l2d"]["auto_blink"] = self.config_editor.auto_blink
 
+class LLMPage(QtWidgets.QWidget):
+    API_data = {
+        "SiliconFlow API": {
+            "id": "siliconflow",
+            "model": [
+                {"DeepSeek-R1": "deepseek-ai/DeepSeek-R1"},
+                {"DeepSeek-V3": "deepseek-ai/DeepSeek-V3"},
+                {"QwQ-32B": "Qwen/QwQ-32B"}
+            ],
+        },
+        "DeepSeek API": {
+            "id": "deepseek",
+            "model": [
+                {"DeepSeek-R1": "deepseek-reasoner"},
+                {"DeepSeek-V3": "deepseek-chat"},
+            ],
+        },
+    }
+
+    def __init__(self, config_editor):
+        super().__init__()
+        self.config_editor = config_editor
+        self.init_ui()
+
+    def init_ui(self):
+        """初始化大语言模型配置"""
+        layout = QtWidgets.QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(layout)
+
+        scroll_area = QtWidgets.QScrollArea()
+        scroll_area.setWidgetResizable(True)  # 允许内容自适应大小
+        layout.addWidget(scroll_area)
+
+        content_widget = QtWidgets.QWidget()
+        scroll_area.setWidget(content_widget)
+
+        form_layout = QtWidgets.QFormLayout()
+        content_widget.setLayout(form_layout)
+
+        # API 提供商下拉框
+        self.platform_combo = QtWidgets.QComboBox()
+        # self.platform_combo.setFixedHeight(30)
+        self.platform_combo.addItem("请选择 API 提供商", userData=None)
+        for api_name in self.API_data.keys():
+            self.platform_combo.addItem(api_name, userData=self.API_data[api_name]["id"])
+        # 检查配置中是否有 target_platform，默认选择
+        saved_platform_id = self.config_editor.config["llm"].get("target_platform")
+        if saved_platform_id:
+            index = self.platform_combo.findData(saved_platform_id)
+            if index != -1:
+                self.platform_combo.setCurrentIndex(index)
+        else:
+            self.platform_combo.setCurrentIndex(0)  # 默认选择 "请选择 API 提供商"
+
+        self.platform_combo.currentIndexChanged.connect(self.update_models)
+        form_layout.addRow("API 提供商", self.platform_combo)
+
+        # 模型下拉框
+        self.model_combo = QtWidgets.QComboBox()
+        # self.model_combo.setFixedHeight(30)
+        self.model_combo.addItem("请选择模型", userData=None)
+        # 检查配置中是否有 target_model，默认选择
+        saved_model_id = self.config_editor.config["llm"].get("target_model")
+        if saved_platform_id and saved_model_id:
+            models = self.API_data.get(next((k for k, v in self.API_data.items() if v["id"] == saved_platform_id), {}), {}).get("model", [])
+            for model in models:
+                model_name, model_id = list(model.items())[0]
+                self.model_combo.addItem(model_name, userData=model_id)
+                if model_id == saved_model_id:
+                    self.model_combo.setCurrentIndex(self.model_combo.count() - 1)
+        else:
+            self.model_combo.setCurrentIndex(0)  # 默认选择 "请选择模型"
+        self.model_combo.currentIndexChanged.connect(self.update_model_and_config)
+        form_layout.addRow("模型", self.model_combo)
+
+        # API Key 输入框
+        self.api_key_input = QtWidgets.QLineEdit()
+        # self.api_key_input.setFixedHeight(30)
+        saved_api_key = self.config_editor.config["llm"].get("api_key", "")
+        self.api_key_input.setText(saved_api_key)
+        self.api_key_input.setPlaceholderText("请输入 API Key")
+        self.api_key_input.textChanged.connect(self.update_api_key)
+        form_layout.addRow("API Key", self.api_key_input)
+
+        # 系统提示词输入框 (多行文本框)
+        self.system_prompt_input = QtWidgets.QTextEdit()
+        # self.system_prompt_input.setFixedHeight(100)  # 设置固定高度
+        saved_system_prompt = self.config_editor.config["llm"].get("system_prompt", "")
+        self.system_prompt_input.setText(saved_system_prompt)
+        self.system_prompt_input.setPlaceholderText("请输入系统提示词")
+        self.system_prompt_input.textChanged.connect(self.update_system_prompt)
+        form_layout.addRow("系统提示词", self.system_prompt_input)
+
+    def update_models(self):
+        """根据选择的 API 提供商更新模型下拉框"""
+        # 清空当前模型列表
+        self.model_combo.clear()
+        self.model_combo.addItem("请选择模型", userData=None)
+
+        # 获取当前选中的 API 提供商的 id
+        selected_platform_id = self.platform_combo.currentData()
+        if selected_platform_id:
+            self.config_editor.config["llm"]["target_platform"] = selected_platform_id
+
+            # 查找对应的平台名称
+            selected_platform_name = next((k for k, v in self.API_data.items() if v["id"] == selected_platform_id), None)
+            if selected_platform_name:
+                models = self.API_data[selected_platform_name]["model"]
+                for model in models:
+                    model_name, model_id = list(model.items())[0]
+                    self.model_combo.addItem(model_name, userData=model_id)
+
+    def update_model_and_config(self):
+        """更新选中的模型到配置中"""
+        selected_model_id = self.model_combo.currentData()
+        if selected_model_id:
+            # 更新配置中的 target_model
+            self.config_editor.config["llm"]["target_model"] = selected_model_id
+
+    def update_api_key(self):
+        """更新 API Key 到配置中"""
+        api_key = self.api_key_input.text()
+        self.config_editor.config["llm"]["api_key"] = api_key
+
+    def update_system_prompt(self):
+        """更新系统提示词到配置中"""
+        system_prompt = self.system_prompt_input.toPlainText()
+        self.config_editor.config["llm"]["system_prompt"] = system_prompt
+
 class ConfigEditor(QtWidgets.QWidget):
     config_updated = QtCore.Signal()
 
@@ -464,6 +608,8 @@ class ConfigEditor(QtWidgets.QWidget):
         self.motion_loader = MotionLoader(self.l2d_model)
         self.motions = self.motion_loader.get_motions()
         self._init_ui()
+
+        self.popup_massage: function = None
 
     def _load_toml_config(self, file_path: str):
         """加载 toml 配置文件"""
@@ -485,6 +631,7 @@ class ConfigEditor(QtWidgets.QWidget):
         self.refresh_rate = general_config.get("refresh_rate", 60)
         config_l2d_size = general_config.get("l2d_size", [300, 600])
         self.l2d_size = QtCore.QSize(config_l2d_size[0], config_l2d_size[1])
+        self.message_size = general_config.get("message_size", 12)
 
         # 加载 Live2D 配置
         l2d_config: dict = self.config.get("l2d")
@@ -495,6 +642,13 @@ class ConfigEditor(QtWidgets.QWidget):
         self.auto_blink = l2d_config.get("auto_blink", "True") == "True"    # str 转 bool
         self.tracking_sensitivity = l2d_config.get("tracking_sensitivity", 1)
         self.standby_active_rate = l2d_config.get("standby_active_rate", 1)
+
+        # 加载大模型配置
+        llm_config: dict = self.config.get("llm")
+        self.target_platform = llm_config.get("target_platform", "")
+        self.target_model = llm_config.get("target_model", "")
+        self.api_key = llm_config.get("api_key", "")
+        self.system_prompt = llm_config.get("system_prompt", "")
 
     def _init_ui(self):
         """初始化界面"""
@@ -531,7 +685,7 @@ class ConfigEditor(QtWidgets.QWidget):
         ### 左侧菜单
         menu_list = QtWidgets.QListWidget()
         menu_list.setFixedWidth(100)
-        menu_list.addItems(["通用", "Live2D"])
+        menu_list.addItems(["通用", "Live2D", "大模型"])
         menu_list.currentRowChanged.connect(self.switch_section)
         content_layout.addWidget(menu_list)
 
@@ -547,6 +701,8 @@ class ConfigEditor(QtWidgets.QWidget):
         self.stacked_widget.addWidget(general_page)
         l2d_page = Live2DPage(self)
         self.stacked_widget.addWidget(l2d_page)
+        llm_page = LLMPage(self)
+        self.stacked_widget.addWidget(llm_page)
 
         ## 按钮布局
         button_layout = QtWidgets.QHBoxLayout()
@@ -555,6 +711,7 @@ class ConfigEditor(QtWidgets.QWidget):
 
         ### 应用按钮
         apply_button = QtWidgets.QPushButton("应用")
+        apply_button.setFont(QtGui.QFont("Microsoft YaHei", 12))
         apply_button.setFixedWidth(120)
         apply_button.setFixedHeight(30)
         apply_button.clicked.connect(self.apply_changes)  # 绑定回调函数
@@ -562,6 +719,7 @@ class ConfigEditor(QtWidgets.QWidget):
 
         ### 确定按钮
         OK_button = QtWidgets.QPushButton("确定")
+        OK_button.setFont(QtGui.QFont("Microsoft YaHei", 12))
         OK_button.setFixedWidth(120)
         OK_button.setFixedHeight(30)
         OK_button.clicked.connect(self.OK_changes)  # 绑定回调函数
@@ -569,6 +727,9 @@ class ConfigEditor(QtWidgets.QWidget):
 
         # 初始化时默认选中第一项
         menu_list.setCurrentRow(0)  # 默认选中“通用”
+
+    def set_popup(self, popup_function: callable):
+        self.popup_message = popup_function
 
     def switch_section(self, index):
         """切换到指定部分"""
@@ -579,9 +740,6 @@ class ConfigEditor(QtWidgets.QWidget):
 
     def apply_changes(self):
         """点击“应用”按钮后保存配置并隐藏窗口"""
-        # config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), self.config_file)
-        # self._save_toml_config(config_path)
-
         self.config_updated.emit()
 
     def OK_changes(self):

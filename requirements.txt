@@ -5,3 +5,4 @@ numpy
 live2d-py
 PyOpenGL
 toml
+openai

@@ -41,3 +41,7 @@ name = "hiyori_m04"
 group = "FlickDown"
 index = 0
 
+[llm]
+api_key = ""
+target_platform = "siliconflow"
+target_model = "deepseek-ai/DeepSeek-V3"

@@ -67,6 +67,7 @@ class Live2DManager:
         }
         self.motion_now: str
         self.motion_manager = Soyoc_motion_manager.MotionManager(self.config_editor)
+        self.to_default = 0
     
     def is_track(self):
         return self.state["track"]
@@ -94,7 +95,14 @@ class Live2DManager:
             self.model_params_range[param.id] = {
                 "min": param.min,
                 "max": param.max,
+                "default": param.default
             }
+
+    def get_param_default(self):
+        default = {}
+        for param_name, value in self.model_params_range.items():
+            default[param_name] = value["default"]
+        return default
 
     def _load_physics(self):
         """从 *.physics3.json 文件中加载模型参数"""
@@ -146,6 +154,7 @@ class Live2DManager:
             self.model_params.update(posture)
             if end:
                 self.set_state_true("track")
+                self.to_default = 0.1 * self.config_editor.refresh_rate
 
         else:
             self.model_params.update(self.l2d_physics.update_model_params(self.model_params, 1 / self.config_editor.refresh_rate, self.velocity))
@@ -157,4 +166,7 @@ class Live2DManager:
             if self.config_editor.auto_blink and param_name in ["ParamEyeLOpen", "ParamEyeROpen"]:
                 continue
 
-            self.model.SetParameterValue(param_name, param_value, 1 / self.config_editor.refresh_rate * 20)
+            self.model.SetParameterValue(param_name, param_value, 1 / self.config_editor.refresh_rate * 30)
+    
+    def param_to_default(self):
+        self.model_params.update(self.get_param_default())

@@ -157,58 +157,99 @@ class AudioAnalyzer:
         return False
 
     def _monitor_accent(self):
-        """实时监测重音"""
+        """使用librosa的onset检测实时监测重音"""
         stream = None
         retry_count = 0
-        with self._audio_lock:  # 使用线程锁保护设备访问
+        with self._audio_lock:
             try:
                 device_index = self.find_stereo_mix_device()
+                sr = 44100  # 采样率
+                chunk_size = 2048  # 每次读取的帧数（约46ms）
+                buffer_size = sr * 1  # 1秒的缓冲区
+                
                 stream = self.pa.open(
                     format=pyaudio.paInt16,
                     channels=1,
-                    rate=44100,
+                    rate=sr,
                     input=True,
                     input_device_index=device_index,
-                    frames_per_buffer=512  # 减小缓冲区降低资源占用
+                    frames_per_buffer=chunk_size
                 )
-                logging.info("开始实时监测重音...")
-
+                
+                logging.info("开始实时重音监测（librosa onset检测）...")
+                audio_buffer = np.zeros((buffer_size,), dtype=np.float32)
+                write_idx = 0
+                
                 while not self._stop_event.is_set() and retry_count < 3:
                     try:
-                        data = stream.read(512, exception_on_overflow=False)
-                        audio_data = np.frombuffer(data, dtype=np.int16)
+                        # 读取音频数据
+                        data = stream.read(chunk_size, exception_on_overflow=False)
+                        chunk = np.frombuffer(data, dtype=np.int16).astype(np.float32) / 32768.0
                         
-                        # 动态音量阈值检测
-                        if np.max(audio_data) > 10000 and self.period > 0:
-                            logging.info(f"当前音量：{np.max(audio_data)}")
-                            self.is_accent = True
-                            logging.info("检测到重音！")
-                            self._stop_event.set()
-                            break  # 检测到重音后立即退出
+                        # 滑动更新缓冲区
+                        if write_idx + len(chunk) > buffer_size:
+                            overlap = write_idx + len(chunk) - buffer_size
+                            audio_buffer[:-overlap] = audio_buffer[overlap:]
+                            audio_buffer[-overlap:] = chunk[:overlap]
+                            write_idx = buffer_size
                         else:
-                            self.is_accent = False
+                            audio_buffer[write_idx:write_idx+len(chunk)] = chunk
+                            write_idx += len(chunk)
                         
-                        retry_count = 0  # 重置重试计数器
-                        time.sleep(0.05)  # 降低CPU占用
+                        # 当缓冲区填满时进行检测
+                        if write_idx >= buffer_size:
+                            # 计算onset强度
+                            onset_env = librosa.onset.onset_strength(
+                                y=audio_buffer,
+                                sr=sr,
+                                aggregate=np.median,
+                                center=False
+                            )
+                            
+                            # 检测onset事件（使用动态阈值）
+                            onsets = librosa.onset.onset_detect(
+                                onset_envelope=onset_env,
+                                sr=sr,
+                                units='time',
+                                backtrack=True,
+                                pre_max=0.5*sr//chunk_size,  # 动态参数调整
+                                post_max=0.5*sr//chunk_size,
+                                pre_avg=2*sr//chunk_size,
+                                post_avg=2*sr//chunk_size,
+                                delta=0.2
+                            )
+                            
+                            # 检测最近0.5秒内的onset
+                            if len(onsets) > 0:
+                                recent_onsets = onsets[onsets > (buffer_size/sr - 0.5)]
+                                if len(recent_onsets) > 0:
+                                    logging.info(f"检测到重音事件: {recent_onsets[-1]:.2f}s")
+                                    self.is_accent = True
+                                    break
+                                    
+                            # 重置写入指针
+                            write_idx = 0
+                        
+                        retry_count = 0
+                        time.sleep(0.01)
                         
                     except OSError as e:
                         retry_count += 1
-                        logging.warning(f"音频流读取异常，重试次数: {retry_count}/3")
+                        logging.warning(f"音频流异常，重试次数: {retry_count}/3")
                         time.sleep(0.1)
                         if retry_count >= 3:
-                            self._stop_event.set()
                             raise e
-
+                            
             except Exception as e:
-                logging.warning(f"监测线程异常: {str(e)}")
+                logging.error(f"重音监测异常: {str(e)}")
                 self._stop_event.set()
             finally:
                 if stream:
                     try:
-                        stream.close()  # 直接关闭流，无需stop_stream()
+                        stream.close()
                     except OSError:
                         pass
-                logging.info("监测线程已终止")
+                logging.info("重音监测线程已终止")
 
     def stop(self):
         self._stop_event.set()

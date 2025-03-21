@@ -20,7 +20,7 @@ class Live2DWidget(QtOpenGLWidgets.QOpenGLWidget):
         self.config_editor.set_l2d_model_manager(self.l2d_manager)
 
         # 监听配置更新信号
-        self.config_editor.config_updated.connect(self.on_config_updated)   # 连接信号 [[9]]
+        self.config_editor.config_updated.connect(self.on_config_updated)   # 连接信号
 
     def on_config_updated(self):
         """处理配置更新事件"""
@@ -258,8 +258,9 @@ class MainWindow(QtWidgets.QMainWindow):
     def closeEvent(self, event):
         """关闭事件处理"""
         self.audio_analyzer.stop()  # 停止音频分析器
-        self.chat_window.close()
         self.config_editor.close()
+        if isinstance(self.chat_window, Soyoc_chat.ChatWindow):
+            self.chat_window.close()
         super().closeEvent(event)
 
     def timerEvent(self, event: QtCore.QTimerEvent):
@@ -331,7 +332,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.l2d_manager.velocity = [0, 0]
             else:
                 # self.show_message_signal.emit("哦？")
-                self.config_editor.popup_message("哦？")
+                self.config_editor.popup_message("哦？") # 测试用
                 self.play_click_motion()
             event.accept()
             # 释放时清空定时器的位置记录

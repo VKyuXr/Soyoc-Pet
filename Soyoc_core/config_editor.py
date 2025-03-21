@@ -269,12 +269,12 @@ class Live2DPage(QtWidgets.QWidget):
 
         header = self.motion_table.horizontalHeader()
         header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeMode.Fixed)  # 固定第一列宽度
-        header.resizeSection(0, 60)  # 设置第一列宽度为 80
+        header.resizeSection(0, 60)
         header.setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeMode.Stretch)  # 第二列拉伸
         header.setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeMode.Fixed)  # 第三列拉伸
-        header.resizeSection(2, 100)  # 设置第一列宽度为 80
+        header.resizeSection(2, 100)
         header.setSectionResizeMode(3, QtWidgets.QHeaderView.ResizeMode.Fixed)  # 第四列拉伸
-        header.resizeSection(3, 100)  # 设置第一列宽度为 80
+        header.resizeSection(3, 100)
         form_layout.addRow(self.motion_table)
         # 初始化表格数据
         self.populate_motion_table()

@@ -31,7 +31,7 @@
 LLVM ERROR: Symbol not found: __svml_cos4_ha
 ```
 
-请将 `./requirements/svml_dispmd.dll` 文件放置于 `C:/Windows/System32` 文件夹内。
+请自行下载 `svml_dispmd.dll` 并将其放置于 `C:/Windows/System32` 文件夹内。
 
 ### 音频录制错误
 

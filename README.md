@@ -14,12 +14,12 @@
 
 1. 前提是已经具有 Python 环境；
 2. 使用 PowerShell 打开 `install.ps1` 文件进行 Python 依赖安装，也可以按照 `requirements.txt` 手动安装依赖；
-3. 使用 `main.py` 启动桌面宠物。
+3. 在项目根目录创建 `model` 文件夹，并将模型放入其中。
+4. 使用 `main.py` 启动桌面宠物。
 
 ## 注意
 
-本项目中包含了 Live2D 官方的 Hiyori 模型；
-本项目包含大量 AI 生成代码。
+本项目包含 AI 生成代码。
 
 ## 错误信息及解决方案汇总
 

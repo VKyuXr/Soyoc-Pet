@@ -2,6 +2,8 @@
 
 一个基于 PySide6 和 live2d-py 的 Live2D 桌面宠物应用,让二次元角色在你的桌面上活起来!
 
+![运行截图](image.png)
+
 ## ✨ 主要特性
 
 - **Live2D 模型渲染**: 支持加载和显示自定义 Live2D 模型
@@ -71,24 +73,34 @@ python main.py
 
 ## 📁 项目结构
 
+### 根目录文件
+
+| 文件/文件夹 | 说明 |
+|------------|------|
+| `main.py` | 程序入口,包含日志管理系统 |
+| `config.toml` | 配置文件(模型路径、动画设置、LLM API等) |
+| `requirements.txt` | Python 依赖列表 |
+| `install.ps1` | Windows 一键安装脚本 |
+| `image.png` | 运行效果截图 |
+| `LICENSE` | 开源许可证 |
+| `.gitignore` | Git 忽略规则 |
+| `model/` | Live2D 模型文件夹(需自行创建) |
+| `logs/` | 运行日志文件夹(自动生成) |
+| `.lingma/` | IDE 配置文件夹 |
+
+### 核心模块 (Soyoc_core/)
+
 ```
-Soyoc-Pet/
-├── main.py                 # 程序入口,包含日志管理系统
-├── config.toml             # 配置文件(模型路径、动画设置、LLM API等)
-├── requirements.txt        # Python 依赖列表
-├── install.ps1            # Windows 一键安装脚本
-├── model/                  # Live2D 模型文件夹(需自行创建)
-├── logs/                   # 运行日志文件夹(自动生成)
-└── Soyoc_core/            # 核心模块
-    ├── main_window.py     # 主窗口和 Live2D 渲染逻辑
-    ├── config_editor.py   # 配置管理模块
-    ├── live2d_manager.py  # Live2D 模型加载和管理
-    ├── motion_manager.py  # 动画管理和播放
-    ├── physics.py         # ⭐ 自定义物理模拟引擎(独立实现)
-    ├── chat_window.py     # LLM 对话界面
-    └── Soyoc_utils/       # 工具模块
-        ├── audio_analyzer.py  # 音频节拍分析
-        └── API_requster.py    # LLM API 调用封装
+Soyoc_core/
+├── main_window.py     # 主窗口和 Live2D 渲染逻辑
+├── config_editor.py   # 配置管理模块
+├── live2d_manager.py  # Live2D 模型加载和管理
+├── motion_manager.py  # 动画管理和播放
+├── physics.py         # ⭐ 自定义物理模拟引擎(独立实现)
+├── chat_window.py     # LLM 对话界面
+└── Soyoc_utils/       # 工具模块
+    ├── audio_analyzer.py  # 音频节拍分析
+    └── API_requster.py    # LLM API 调用封装
 ```
 
 > 💡 **特别说明**: `physics.py` 是我自己实现的物理模拟,用于处理 Live2D 模型的物理效果(如头发、衣摆的自然摆动)。这部分由本项目开发。
